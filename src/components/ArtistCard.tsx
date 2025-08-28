@@ -94,27 +94,37 @@ export default function ArtistCard({ artist, timeRange, className }: ArtistCardP
 
   const handleTraditionalDonation = async () => {
     try {
-      const response = await fetch('/api/donate-mock', {
+      const response = await fetch('/api/donate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
           artistName: artist.name, 
-          amount: parseInt(donationAmount) 
+          artistId: artist.id,
+          amount: parseFloat(donationAmount) 
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        alert(`💳 ${result.message}\n\nThis is a mock donation for testing. In production, this would process a real payment through Stripe.`);
-        setShowDonationModal(false);
-        setDonationAmount("");
+        
+        if (result.success) {
+          // Show success message with payment details
+          alert(`💳 Stripe Donation Successful!\n\nAmount: $${result.amount}\nPayment Intent: ${result.paymentIntentId}\nStatus: ${result.status}\n\nYour donation to ${result.artistName} has been processed successfully!`);
+          
+          setShowDonationModal(false);
+          setDonationAmount("");
+        } else {
+          throw new Error(result.error || 'Donation failed');
+        }
       } else {
-        throw new Error('Donation failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Donation failed');
       }
     } catch (error) {
-      alert('Error processing donation. Please try again.');
+      console.error('Stripe donation error:', error);
+      alert(`Error processing Stripe donation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
